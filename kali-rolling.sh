@@ -39,7 +39,7 @@ if [ 1 -eq 0 ]; then    # This is never true, thus it acts as block comments ;)
 ################################################################################
 ### One liner - Grab the latest version and execute! ###########################
 ################################################################################
-wget -qO kali-rolling.sh https://raw.github.com/g0tmi1k/os-scripts/master/kali-rolling.sh \
+wget -qO kali-rolling.sh https://raw.github.com/dbaser/os-scripts/master/kali-rolling.sh \
   && bash kali-rolling.sh -burp -keyboard gb -timezone "Europe/London"
 ################################################################################
 fi
@@ -404,11 +404,11 @@ if [[ $? -ne 0 ]]; then
 fi
 
 
-##### Install "kali full" meta packages (default tool selection)
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}kali-linux-full${RESET} meta-package"
+##### Install "kali forensic" meta packages 
+(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}kali-linux-forensic${RESET} meta-package"
 echo -e " ${YELLOW}[i]${RESET}  ...this ${BOLD}may take a while${RESET} depending on your Kali version (e.g. ARM, light, mini or docker...)"
-#--- Kali's default tools ~ https://www.kali.org/news/kali-linux-metapackages/
-apt -y -qq install kali-linux-full \
+--- Kali's default tools ~ https://www.kali.org/news/kali-linux-metapackages/
+apt -y -qq install kali-linux-forensic \
   || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
 
 
@@ -776,23 +776,11 @@ for FILE in $(echo ${_TMP}); do rm -f "${FILE}"; done
 #--- Kali 2 & Rolling (Wallpaper)
 [ -e "/usr/share/images/desktop-base/kali-wallpaper_1920x1080.png" ] \
   && ln -sf /usr/share/images/desktop-base/kali-wallpaper_1920x1080.png /usr/share/wallpapers/kali_default2.0-1920x1080.jpg
-#--- New wallpaper & add to startup (so its random each login)
-mkdir -p /usr/local/bin/
-file=/usr/local/bin/rand-wallpaper; [ -e "${file}" ] && cp -n $file{,.bkup}
-cat <<EOF > "${file}" \
-  || echo -e ' '${RED}'[!] Issue with writing file'${RESET} 1>&2
-#!/bin/bash
-
-wallpaper="\$(shuf -n1 -e \$(find /usr/share/wallpapers/ -maxdepth 1 -name 'kali_*'))"
 
 ## XFCE - Desktop wallpaper
 /usr/bin/xfconf-query -n -c xfce4-desktop -p /backdrop/screen0/monitor0/image-show -t bool -s true
 /usr/bin/xfconf-query -n -c xfce4-desktop -p /backdrop/screen0/monitor0/image-path -t string -s "\${wallpaper}"
 /usr/bin/xfconf-query -n -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -t string -s "\${wallpaper}"
-
-## GNOME - Desktop wallpaper
-#[[ $(which gnome-shell) ]] \
-#  && dconf write /org/gnome/desktop/background/picture-uri "'file://\${wallpaper}'"
 
 ## Change lock wallpaper (before swipe) - kali 2 & rolling
 /usr/bin/dconf write /org/gnome/desktop/screensaver/picture-uri "'file://\${wallpaper}'"
@@ -1542,158 +1530,6 @@ else     # Create new
 fi
 
 
-##### Install conky
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}conky${RESET} ~ GUI desktop monitor"
-export DISPLAY=:0.0
-apt -y -qq install conky \
-  || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
-#--- Configure conky
-file=~/.conkyrc; [ -e "${file}" ] && cp -n $file{,.bkup}
-if [[ -f "${file}" ]]; then
-  echo -e ' '${RED}'[!]'${RESET}" ${file} detected. Skipping..." 1>&2
-else
-  cat <<EOF > "${file}"
---# Useful: http://forums.opensuse.org/english/get-technical-help-here/how-faq-forums/unreviewed-how-faq/464737-easy-configuring-conky-conkyconf.html
-conky.config = {
-    background = false,
-
-    font = 'monospace:size=8:weight=bold',
-    use_xft = true,
-
-    update_interval = 2.0,
-
-    own_window = true,
-    own_window_type = 'normal',
-    own_window_transparent = true,
-    own_window_class = 'conky-semi',
-    own_window_argb_visual = false,
-    own_window_colour = 'brown',
-    own_window_hints = 'undecorated,below,sticky,skip_taskbar,skip_pager',
-
-    double_buffer = true,
-    maximum_width = 260,
-
-    draw_shades = true,
-    draw_outline = false,
-    draw_borders = false,
-
-    stippled_borders = 3,
-    border_inner_margin = 9,
-    border_width = 10,
-
-    default_color = 'grey',
-
-    alignment = 'bottom_right',
-    gap_x = 5,
-    gap_y = 0,
-
-    uppercase = false,
-    use_spacer = 'right',
-};
-
-conky.text = [[
-\${color dodgerblue3}SYSTEM \${hr 2}\$color
-#\${color white}\${time %A},\${time %e} \${time %B} \${time %G}\${alignr}\${time %H:%M:%S}
-\${color white}Host\$color: \$nodename  \${alignr}\${color white}Uptime\$color: \$uptime
-
-\${color dodgerblue3}CPU \${hr 2}\$color
-#\${font Arial:bold:size=8}\${execi 99999 grep "model name" -m1 /proc/cpuinfo | cut -d":" -f2 | cut -d" " -f2- | sed "s#Processor ##"}\$font\$color
-\${color white}MHz\$color: \${freq} \${alignr}\${color white}Load\$color: \${exec uptime | awk -F "load average: "  '{print \$2}'}
-\${color white}Tasks\$color: \$running_processes/\$processes \${alignr}\${color white}CPU0\$color: \${cpu cpu0}% \${color white}CPU1\$color: \${cpu cpu1}%
-#\${color #c0ff3e}\${acpitemp}C
-#\${execi 20 sensors |grep "Core0 Temp" | cut -d" " -f4}\$font\$color\${alignr}\${freq_g 2} \${execi 20 sensors |grep "Core1 Temp" | cut -d" " -f4}
-\${cpugraph cpu0 25,120 000000 white} \${alignr}\${cpugraph cpu1 25,120 000000 white}
-\${color white}\${cpubar cpu1 3,120} \${alignr}\${color white}\${cpubar cpu2 3,120}\$color
-
-\${color dodgerblue3}PROCESSES \${hr 2}\$color
-\${color white}NAME             PID     CPU     MEM
-\${color white}\${top name 1}\${top pid 1}  \${top cpu 1}  \${top mem 1}\$color
-\${top name 2}\${top pid 2}  \${top cpu 2}  \${top mem 2}
-\${top name 3}\${top pid 3}  \${top cpu 3}  \${top mem 3}
-\${top name 4}\${top pid 4}  \${top cpu 4}  \${top mem 4}
-\${top name 5}\${top pid 5}  \${top cpu 5}  \${top mem 5}
-
-\${color dodgerblue3}MEMORY & SWAP \${hr 2}\$color
-\${color white}RAM\$color  \$alignr\$memperc%  \${membar 6,170}\$color
-\${color white}Swap\$color  \$alignr\$swapperc%  \${swapbar 6,170}\$color
-
-\${color dodgerblue3}FILESYSTEM \${hr 2}\$color
-\${color white}root\$color \${fs_free_perc /}% free\${alignr}\${fs_free /}/ \${fs_size /}
-\${fs_bar 3 /}\$color
-#\${color white}home\$color \${fs_free_perc /home}% free\${alignr}\${fs_free /home}/ \${fs_size /home}
-#\${fs_bar 3 /home}\$color
-
-\${color dodgerblue3}LAN eth0 (\${addr eth0}) \${hr 2}\$color
-\${color white}Down\$color:  \${downspeed eth0} KB/s\${alignr}\${color white}Up\$color: \${upspeed eth0} KB/s
-\${color white}Downloaded\$color: \${totaldown eth0} \${alignr}\${color white}Uploaded\$color: \${totalup eth0}
-\${downspeedgraph eth0 25,120 000000 00ff00} \${alignr}\${upspeedgraph eth0 25,120 000000 ff0000}\$color
-
-EOF
-ip addr show eth1 &>/dev/null \
-  && cat <<EOF >> "${file}"
-\${color dodgerblue3}LAN eth1 (\${addr eth1}) \${hr 2}\$color
-\${color white}Down\$color:  \${downspeed eth1} KB/s\${alignr}\${color white}Up\$color: \${upspeed eth1} KB/s
-\${color white}Downloaded\$color: \${totaldown eth1} \${alignr}\${color white}Uploaded\$color: \${totalup eth1}
-\${downspeedgraph eth1 25,120 000000 00ff00} \${alignr}\${upspeedgraph eth1 25,120 000000 ff0000}\$color
-
-EOF
-cat <<EOF >> "${file}"
-\${color dodgerblue3}Wi-Fi (\${addr wlan0}) \${hr 2}\$color
-\${color white}Down\$color:  \${downspeed wlan0} KB/s\${alignr}\${color white}Up\$color: \${upspeed wlan0} KB/s
-\${color white}Downloaded\$color: \${totaldown wlan0} \${alignr}\${color white}Uploaded\$color: \${totalup wlan0}
-\${downspeedgraph wlan0 25,120 000000 00ff00} \${alignr}\${upspeedgraph wlan0 25,120 000000 ff0000}\$color
-
-\${color dodgerblue3}CONNECTIONS \${hr 2}\$color
-\${color white}Inbound: \$color\${tcp_portmon 1 32767 count}  \${alignc}\${color white}Outbound: \$color\${tcp_portmon 32768 61000 count}\${alignr}\${color white}Total: \$color\${tcp_portmon 1 65535 count}
-\${color white}Inbound \${alignr}Local Service/Port\$color
-\$color \${tcp_portmon 1 32767 rhost 0} \${alignr}\${tcp_portmon 1 32767 lservice 0}
-\$color \${tcp_portmon 1 32767 rhost 1} \${alignr}\${tcp_portmon 1 32767 lservice 1}
-\$color \${tcp_portmon 1 32767 rhost 2} \${alignr}\${tcp_portmon 1 32767 lservice 2}
-\${color white}Outbound \${alignr}Remote Service/Port\$color
-\$color \${tcp_portmon 32768 61000 rhost 0} \${alignr}\${tcp_portmon 32768 61000 rservice 0}
-\$color \${tcp_portmon 32768 61000 rhost 1} \${alignr}\${tcp_portmon 32768 61000 rservice 1}
-\$color \${tcp_portmon 32768 61000 rhost 2} \${alignr}\${tcp_portmon 32768 61000 rservice 2}
-]]
-EOF
-fi
-#--- Create start script
-mkdir -p /usr/local/bin/
-file=/usr/local/bin/start-conky; [ -e "${file}" ] && cp -n $file{,.bkup}
-cat <<EOF > "${file}" \
-  || echo -e ' '${RED}'[!] Issue with writing file'${RESET} 1>&2
-#!/bin/bash
-
-[[ -z \${DISPLAY} ]] && export DISPLAY=:0.0
-
-$(which timeout) 10 $(which killall) -9 -q -w conky
-$(which sleep) 20s
-$(which conky) &
-EOF
-chmod -f 0500 "${file}"
-#--- Run now
-bash /usr/local/bin/start-conky >/dev/null 2>&1 &
-#--- Add to startup (each login)
-mkdir -p ~/.config/autostart/
-file=~/.config/autostart/conkyscript.desktop; [ -e "${file}" ] && cp -n $file{,.bkup}
-cat <<EOF > "${file}" \
-  || echo -e ' '${RED}'[!] Issue with writing file'${RESET} 1>&2
-[Desktop Entry]
-Name=conky
-Exec=/usr/local/bin/start-conky
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-Type=Application
-Comment=
-EOF
-#--- Add keyboard shortcut (CTRL+r) to run the conky refresh script
-file=~/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml   #; [ -e "${file}" ] && cp -n $file{,.bkup}
-if [ -e "${file}" ]; then
-  grep -q '<property name="&lt;Primary&gt;r" type="string" value="/usr/local/bin/start-conky"/>' "${file}" \
-    || sed -i 's#<property name="\&lt;Alt\&gt;F2" type="string" value="xfrun4"/>#<property name="\&lt;Alt\&gt;F2" type="string" value="xfrun4"/>\n      <property name="\&lt;Primary\&gt;r" type="string" value="/usr/local/bin/start-conky"/>#' "${file}"
-fi
-
-
 ##### Install metasploit ~ http://docs.kali.org/general-use/starting-metasploit-framework-in-kali
 (( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}metasploit${RESET} ~ exploit framework"
 apt -y -qq install metasploit-framework \
@@ -1851,19 +1687,6 @@ for plugin in modelines sort externaltools docinfo filebrowser quickopen time sp
   new=$( echo "${loaded} '${plugin}']" | sed "s/'] /', /" )
   dconf write /org/gnome/gedit/plugins/active-plugins "${new}"
 done
-
-
-##### Install PyCharm (Community Edition)
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}PyCharm (Community Edition)${RESET} ~ Python IDE"
-timeout 300 curl --progress -k -L -f "https://download.jetbrains.com/python/pycharm-community-2016.2.3.tar.gz" > /tmp/pycharms-community.tar.gz \
-  || echo -e ' '${RED}'[!]'${RESET}" Issue downloading pycharms-community.tar.gz" 1>&2       #***!!! hardcoded version!
-if [ -e /tmp/pycharms-community.tar.gz ]; then
-  tar -xf /tmp/pycharms-community.tar.gz -C /tmp/
-  rm -rf /opt/pycharms/
-  mv -f /tmp/pycharm-community-*/ /opt/pycharms
-  mkdir -p /usr/local/bin/
-  ln -sf /opt/pycharms/bin/pycharm.sh /usr/local/bin/pycharms
-fi
 
 
 ##### Install wdiff
@@ -2071,59 +1894,6 @@ apt -y -qq install silversearcher-ag \
   || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
 
 
-##### Install rips
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}rips${RESET} ~ source code scanner"
-apt -y -qq install apache2 php git \
-  || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
-git clone -q -b master https://github.com/ripsscanner/rips.git /opt/rips-git/ \
-  || echo -e ' '${RED}'[!] Issue when git cloning'${RESET} 1>&2
-pushd /opt/rips-git/ >/dev/null
-git pull -q
-popd >/dev/null
-#--- Add to path
-file=/etc/apache2/conf-available/rips.conf
-[ -e "${file}" ] \
-  || cat <<EOF > "${file}"
-Alias /rips /opt/rips-git
-
-<Directory /opt/rips-git/ >
-  Options FollowSymLinks
-  AllowOverride None
-  Order deny,allow
-  Deny from all
-  Allow from 127.0.0.0/255.0.0.0 ::1/128
-</Directory>
-EOF
-ln -sf /etc/apache2/conf-available/rips.conf /etc/apache2/conf-enabled/rips.conf
-systemctl restart apache2
-
-
-##### Install graudit
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}graudit${RESET} ~ source code auditing"
-apt -y -qq install git \
-  || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
-git clone -q -b master https://github.com/wireghoul/graudit.git /opt/graudit-git/ \
-  || echo -e ' '${RED}'[!] Issue when git cloning'${RESET} 1>&2
-pushd /opt/graudit-git/ >/dev/null
-git pull -q
-popd >/dev/null
-#--- Add to path
-mkdir -p /usr/local/bin/
-file=/usr/local/bin/graudit-git
-cat <<EOF > "${file}" \
-  || echo -e ' '${RED}'[!] Issue with writing file'${RESET} 1>&2
-#!/bin/bash
-
-cd /opt/graudit-git/ && bash graudit.sh "\$@"
-EOF
-chmod +x "${file}"
-
-
-##### Install libreoffice
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}LibreOffice${RESET} ~ GUI office suite"
-apt -y -qq install libreoffice \
-  || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
-
 
 ##### Install ipcalc & sipcalc
 (( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}ipcalc${RESET} & ${GREEN}sipcalc${RESET} ~ CLI subnet calculators"
@@ -2134,12 +1904,6 @@ apt -y -qq install ipcalc sipcalc \
 ##### Install asciinema
 (( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}asciinema${RESET} ~ CLI terminal recorder"
 curl -s -L https://asciinema.org/install | sh
-
-
-##### Install shutter
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}shutter${RESET} ~ GUI static screen capture"
-apt -y -qq install shutter \
-  || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
 
 
 ##### Install psmisc ~ allows for 'killall command' to be used
@@ -2225,12 +1989,6 @@ grep -q '^alias axel' "${file}" 2>/dev/null \
   || echo -e '## axel\nalias axel="axel -a"\n' >> "${file}"
 #--- Apply new alias
 source "${file}" || source ~/.zshrc
-
-
-##### Install html2text
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}html2text${RESET} ~ CLI html rendering"
-apt -y -qq install html2text \
-  || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
 
 
 ##### Install tmux2html
@@ -3411,52 +3169,6 @@ systemctl disable atftpd
 #echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
 
 
-##### Install Pure-FTPd
-(( STAGE++ )); echo -e "\n\n ${GREEN}[+]${RESET} (${STAGE}/${TOTAL}) Installing ${GREEN}Pure-FTPd${RESET} ~ FTP server/file transfer method"
-apt -y -qq install pure-ftpd \
-  || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
-#--- Setup pure-ftpd
-mkdir -p /var/ftp/
-groupdel ftpgroup 2>/dev/null;
-groupadd ftpgroup
-userdel ftp 2>/dev/null;
-useradd -r -M -d /var/ftp/ -s /bin/false -c "FTP user" -g ftpgroup ftp
-chown -R ftp\:ftpgroup /var/ftp/
-chmod -R 0755 /var/ftp/
-pure-pw userdel ftp 2>/dev/null;
-echo -e '\n' | pure-pw useradd ftp -u ftp -d /var/ftp/
-pure-pw mkdb
-#--- Configure pure-ftpd
-echo "no" > /etc/pure-ftpd/conf/UnixAuthentication
-echo "no" > /etc/pure-ftpd/conf/PAMAuthentication
-echo "yes" > /etc/pure-ftpd/conf/NoChmod
-echo "yes" > /etc/pure-ftpd/conf/ChrootEveryone
-#echo "yes" > /etc/pure-ftpd/conf/AnonymousOnly
-echo "no" > /etc/pure-ftpd/conf/NoAnonymous
-echo "yes" > /etc/pure-ftpd/conf/AnonymousCanCreateDirs
-echo "yes" > /etc/pure-ftpd/conf/AllowAnonymousFXP
-echo "no" > /etc/pure-ftpd/conf/AnonymousCantUpload
-echo "30768 31768" > /etc/pure-ftpd/conf/PassivePortRange              #cat /proc/sys/net/ipv4/ip_local_port_range
-echo "/etc/pure-ftpd/welcome.msg" > /etc/pure-ftpd/conf/FortunesFile   #/etc/motd
-echo "FTP" > /etc/pure-ftpd/welcome.msg
-ln -sf /etc/pure-ftpd/conf/PureDB /etc/pure-ftpd/auth/50pure
-#--- 'Better' MOTD
-apt -y -qq install cowsay \
-  || echo -e ' '${RED}'[!] Issue with apt install'${RESET} 1>&2
-echo "moo" | /usr/games/cowsay > /etc/pure-ftpd/welcome.msg
-echo -e " ${YELLOW}[i]${RESET} Pure-FTPd username: anonymous"
-echo -e " ${YELLOW}[i]${RESET} Pure-FTPd password: anonymous"
-#--- Apply settings
-systemctl restart pure-ftpd
-#--- Setup alias
-file=~/.bash_aliases; [ -e "${file}" ] && cp -n $file{,.bkup}   #/etc/bash.bash_aliases
-([[ -e "${file}" && "$(tail -c 1 ${file})" != "" ]]) && echo >> "${file}"
-grep -q '^## ftp' "${file}" 2>/dev/null \
-  || echo -e '## ftp\nalias ftproot="cd /var/ftp/"\n' >> "${file}"
-#--- Apply new alias
-source "${file}" || source ~/.zshrc
-#--- Remove from start up
-systemctl disable pure-ftpd
 
 
 ##### Install samba
